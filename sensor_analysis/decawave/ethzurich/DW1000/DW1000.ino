@@ -2,7 +2,9 @@
 #include "DW1000.h"
 #include "MMRanging.h"
 
-const int chipSelectPin = 7;
+//const int chipSelectPin = 13;  // Arduino
+const int chipSelectPin = 10;  // Teensy
+// SPISettings DW1000Settings(1000000, MSBFIRST, SPI_MODE0);  // Teensy
 
 void setup() {
   Serial.begin(9600);
@@ -20,7 +22,6 @@ void setup() {
 
 //////// Is the decawave MSBFirst or LSBFirst? No idea    
   // It looks like SPISettings is just for the Teensy
-  // SPISettings DW1000Settings(1000000, MSBFIRST, SPI_MODE0);
 
   // For Arduino, use these functions
   // http://arduino.cc/en/Reference/SPI
@@ -41,8 +42,8 @@ void setup() {
   writeRegister8(DW1000_SYS_CFG, 2, 0x03); // enable 1024 byte frames
 
 // From MMRanging.cpp ---------------------------------------------------------
-//  message[0] = '\0';
-//  messageRX[0] = '\0';
+  message[0] = '\0';
+  messageRX[0] = '\0';
   event_i = 0;
   counter = 0;
   setInterrupt(true, true);
@@ -58,7 +59,7 @@ void setup() {
   Serial.print("DEVICE_ID register: ");
   Serial.println(getDeviceID());
   Serial.print("EUI register: ");
-  Serial.println((int)getEUI());
+  print64(getEUI());
   Serial.print("Voltage: ");
   Serial.println(getVoltage());
   receiver = true;
@@ -66,7 +67,10 @@ void setup() {
 
 void loop() {
   fakeISR();
+  Serial.println("Hi! Looping");
   delay(100);
+  Serial.println(message);
+  Serial.println(messageRX);
 
 // From main.cpp ---------------------------------------------------------
   for(int j = 0; j < 10; j++) {
@@ -84,6 +88,8 @@ void loop() {
 
 void callbackRX() {
     RX_timestamp = getRXTimestamp();
+    Serial.print("RX_timestamp: "); print64(RX_timestamp);
+    Serial.print("TX_timestamp: "); print64(TX_timestamp);
     receiveString(messageRX);
     if (receiver) {
         message[0] = 'A';                               // acknowledge messages
@@ -91,8 +97,7 @@ void callbackRX() {
             message[i+1] = messageRX[i];
         sendString(message);
     }
-    eventtimes[event_i] = RX_timestamp - TX_timestamp;                      // TODO: can give some wrong values because of timer reset after 17 seconds
-    Serial.print("Got an eventtimes value");
+    eventtimes[event_i] = RX_timestamp - TX_timestamp;  // TODO: can give some wrong values because of timer reset after 17 seconds
     event[event_i][0] = '!';
     event[event_i][1] = 'R';
     event[event_i][2] = ' ';
@@ -342,7 +347,7 @@ void setupTransaction(uint8_t reg, uint16_t subaddress, bool write) {
 // set CS low to start transmission
 void select() {
 //////// Appears to be just for the Teensy  
-  // SPI.beginTransaction(DW1000Settings);
+//  SPI.beginTransaction(DW1000Settings);
   digitalWrite(chipSelectPin, LOW);
 }
 
@@ -350,5 +355,24 @@ void select() {
 void deselect() { 
   digitalWrite(chipSelectPin, HIGH);
 //////// Appears to be just for the Teensy
-  // SPI.endTransaction();
+//  SPI.endTransaction();
 }
+
+void print64(unsigned long long n) {
+  uint8_t base = 10;
+  char buf[8 * sizeof(long long) + 1]; // Assumes 8-bit chars plus zero byte.
+  char *str = &buf[sizeof(buf) - 1];
+
+  *str = '\0';
+
+  do {
+    unsigned long m = n;
+    n /= base;
+    char c = m - base * n;
+    *--str = c < 10 ? c + '0' : c + 'A' - 10;
+  } while(n);
+
+  Serial.println(str);
+}
+
+

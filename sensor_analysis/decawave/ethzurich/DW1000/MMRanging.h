@@ -8,8 +8,10 @@
 // conversion between LSB of TX and RX timestamps and microseconds
 #define MMRANGING_TIMEUNIT 1/(128*499.2)
 bool receiver;
-char message[1021];
-char messageRX[1021];
+//char message[1021];
+//char messageRX[1021];
+char message[127];
+char messageRX[127];
 uint64_t TX_timestamp;
 uint64_t RX_timestamp;
 int event_i;
