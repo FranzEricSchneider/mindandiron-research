@@ -2,9 +2,13 @@
 #include "DW1000.h"
 #include "MMRanging.h"
 
-//const int chipSelectPin = 13;  // Arduino
+// DecaWave 0.2 up and running
+// DEVICE_ID register: 4294967295
+// EUI register: 18446744073709551615
+// Voltage: 3.75
+
 const int chipSelectPin = 10;  // Teensy
-// SPISettings DW1000Settings(1000000, MSBFIRST, SPI_MODE0);  // Teensy
+SPISettings DW1000Settings(4000000, MSBFIRST, SPI_MODE0);  // Teensy
 
 void setup() {
   Serial.begin(9600);
@@ -14,21 +18,16 @@ void setup() {
 
 // From DW1000.cpp ---------------------------------------------------------
   SPI.begin(); // start the SPI library:
-  pinMode(chipSelectPin, OUTPUT); // initalize the  data ready and chip select pins:
+  SPI.beginTransaction(DW1000Settings);
+  pinMode(chipSelectPin, OUTPUT); // initalize the chip select pins:
   deselect(); // Chip must be deselected first
 
   Serial.println("SPI up and running");
   delay(2000);
 
-//////// Is the decawave MSBFirst or LSBFirst? No idea    
-  // It looks like SPISettings is just for the Teensy
-
-  // For Arduino, use these functions
-  // http://arduino.cc/en/Reference/SPI
-  // Default clock divider is 4 MHz, which is okay?
-  // Default significant bit is MSBFirst? We'll try that!
-  // Default mode is Mode0, which is what we want
-////////
+  // Default clock divider is 4 MHz
+  // Default significant bit is MSBFirst
+  // Default mode is Mode0
 
   // we can do a soft reset if we want to (only needed for debugging)
   resetAll();
@@ -67,10 +66,7 @@ void setup() {
 
 void loop() {
   fakeISR();
-  Serial.println("Hi! Looping");
   delay(100);
-  Serial.println(message);
-  Serial.println(messageRX);
 
 // From main.cpp ---------------------------------------------------------
   for(int j = 0; j < 10; j++) {
@@ -148,7 +144,6 @@ void requestRanging() {
 //   irq.rise(this, &ISR);       // attach Interrupt handler to rising edge
 // }
 
-//////// Not integrated, what should we do about callbacks?
 // void setCallbacks(void (*callbackRX)(void), void (*callbackTX)(void)) {
 //   bool RX = false;
 //   bool TX = false;
@@ -260,12 +255,10 @@ void setInterrupt(bool RX, bool TX) {
 void fakeISR() {
   uint64_t status = getStatus();
   if (status & 0x4000) {                                        // a frame was received
-    Serial.println("Doing RX callback");
     callbackRX();
     writeRegister16(DW1000_SYS_STATUS, 0, 0x6F00);              // clearing of receiving status bits
   }
   if (status & 0x80) {                                          // sending complete
-    Serial.println("Doing TX callback");
     callbackTX();
     writeRegister8(DW1000_SYS_STATUS, 0, 0xF8);                 // clearing of sending status bits
   }
@@ -346,33 +339,24 @@ void setupTransaction(uint8_t reg, uint16_t subaddress, bool write) {
 
 // set CS low to start transmission
 void select() {
-//////// Appears to be just for the Teensy  
-//  SPI.beginTransaction(DW1000Settings);
   digitalWrite(chipSelectPin, LOW);
 }
 
 // set CS high to stop transmission
 void deselect() { 
   digitalWrite(chipSelectPin, HIGH);
-//////// Appears to be just for the Teensy
-//  SPI.endTransaction();
 }
 
 void print64(unsigned long long n) {
   uint8_t base = 10;
   char buf[8 * sizeof(long long) + 1]; // Assumes 8-bit chars plus zero byte.
   char *str = &buf[sizeof(buf) - 1];
-
   *str = '\0';
-
   do {
     unsigned long m = n;
     n /= base;
     char c = m - base * n;
     *--str = c < 10 ? c + '0' : c + 'A' - 10;
   } while(n);
-
   Serial.println(str);
 }
-
-
