@@ -1,3 +1,4 @@
+
 #include <SPI.h>
 #include "DW1000.h"
 #include "MMRanging.h"
@@ -62,11 +63,18 @@ void setup() {
   Serial.print("Voltage: ");
   Serial.println(getVoltage());
   receiver = true;
+  delay(2000);
 }
 
 void loop() {
   fakeISR();
   delay(100);
+  Serial.print("DEVICE_ID register: "); Serial.println(getDeviceID());  // TODO: remove
+  delay(50);
+  Serial.print("EUI register: "); print64(getEUI());  // TODO: remove
+  delay(50);
+  Serial.print("Voltage: "); Serial.println(getVoltage());  // TODO: remove
+  delay(50);
 
 // From main.cpp ---------------------------------------------------------
   for(int j = 0; j < 10; j++) {
