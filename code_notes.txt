@@ -1,0 +1,8 @@
+kratos.cc	--	Mostly defines gazebo interface
+	Defines a wheel class with settable torque and a measureable velocity
+	Defines a TRS class with a GetPosition function
+	Defines a Robot class
+
+telemetry.cpp	--	Produces the GUI
+
+robot.cc	--	Contains the robot code
